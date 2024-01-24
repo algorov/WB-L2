@@ -1,5 +1,12 @@
 package main
 
+import (
+	"fmt"
+	"github.com/beevik/ntp"
+	"log"
+	"time"
+)
+
 /*
 === Базовая задача ===
 
@@ -12,6 +19,21 @@ package main
 Программа должна проходить проверки go vet и golint.
 */
 
-func main() {
+func GetTime() time.Time {
+	// Обращается к NTP (Network Time Protocol) и получает ответ в виде структуры time.Time.
+	// Также может вернуться ошибка. Последующая обработка.
+	reponse, err := ntp.Time("0.beevik-ntp.pool.ntp.org")
+	if err != nil {
+		// Выводит ошибку и завершает с ненулевым кодом выхода в OSю
+		log.Fatal(err)
+	}
 
+	// Если всё прошло без ошибок, возвращает ответ.
+	return reponse
+}
+
+func main() {
+	// Происходит сравнение времени из разных источников.
+	fmt.Printf("Time from NTP: %+v\n", GetTime())
+	fmt.Printf("Time from host: %+v\n", time.Now())
 }
