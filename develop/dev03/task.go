@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -34,34 +35,65 @@ import (
 */
 
 func main() {
+	// Переменные для хранения значения переданных ключей.
 	var k int
 	var n, r, u, M, b, c, h bool
 
+	// Объявления ключей.
+	// Поддержка базовых ключей.
 	flag.IntVar(&k, "k", 0, "Указание колонки для сортировки")
 
 	flag.BoolVar(&n, "n", false, "Cортировка по числовому значению")
 	flag.BoolVar(&r, "r", false, "Cортировка в обратном порядке")
 	flag.BoolVar(&u, "u", false, "Исключение повторяющихся строк")
 
+	// Поддержка дополнительных ключей.
 	flag.BoolVar(&M, "M", false, "Сортировка по названию месяца")
 	flag.BoolVar(&b, "b", false, "Игнорирование хвостовых пробелов")
 	flag.BoolVar(&c, "c", false, "Проверка на отсортированность данных")
 	flag.BoolVar(&h, "h", false, "Сортировка по числовому значению с учетом суффиксов")
 
+	// Получение ключей.
 	flag.Parse()
 
+	// Получение входного и выходного файлов.
+	// Проверка на корректность.
 	input, output := flag.Arg(0), flag.Arg(1)
 	if input == "" || output == "" {
 		fmt.Println("Обозначьте, мистер, входной и выходной файлы")
 		return
 	}
 
+	// Если пользователь указал номер колонки меньше нули или ноль, то колонка выбирается по-умолчанию - 0.
+	// Иначе номер колонки декрементируется, поскольку индекс для слайсов начинается с нуля.
+	if k <= 0 {
+		k = 0
+	} else {
+		k--
+	}
+
+	// Чтение из входного файла.
 	data, err := readFile(input)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
+	var compareFunc func(i, j int) bool
+
+	compareFunc = func(i, j int) bool {
+		if r {
+			return getLen(data, i, k) > getLen(data, j, k)
+		}
+
+		return getLen(data, i, k) < getLen(data, j, k)
+	}
+
+	fmt.Println(data)
+	sort.Slice(data, compareFunc)
+	fmt.Println(data)
+
+	// Запись в выходной файл.
 	if err := writeFile(output, data); err != nil {
 		fmt.Println(err)
 		return
@@ -112,12 +144,22 @@ func writeFile(fileName string, data [][]string) error {
 }
 
 // Доступ к определенному элементу.
-func getElement(data [][]string, i, j int) string {
+func getElement(data [][]string, i, k int) string {
 	// Если индекс допустим в слайсе, то возвращает элемент.
-	if j >= 0 && j < len(data[i]) {
-		return data[i][j]
+	if k >= 0 && k < len(data[i]) {
+		return data[i][k]
 	}
 
 	// Иначе возвращает пустую строку.
 	return ""
+}
+
+func getLen(data [][]string, i, k int) int {
+	// Если индекс допустим в слайсе, то возвращает элемент.
+	if k >= 0 && k < len(data[i]) {
+		return len(data[i][k])
+	}
+
+	// Иначе возвращает пустую строку.
+	return 0
 }
