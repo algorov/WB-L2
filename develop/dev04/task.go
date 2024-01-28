@@ -1,5 +1,11 @@
 package main
 
+import (
+	"fmt"
+	"sort"
+	"strings"
+)
+
 /*
 === Поиск анаграмм по словарю ===
 
@@ -20,5 +26,100 @@ package main
 */
 
 func main() {
+	ms := []string{"пятка", "пятка", "тяпка", "пятка", "232232"}
 
+	fmt.Println(AnagramProc(ms))
+}
+
+func AnagramProc(ms []string) map[string][]string {
+	// Приводит слова к нижнему регистру.
+	for i, n := range ms {
+		ms[i] = strings.ToLower(n)
+	}
+
+	// Сортирует последовательность строкю
+	sort.Strings(ms)
+
+	// Итоговая мапа, где будет храниться результат.
+	anagrams := make(map[string][]string)
+
+	// Итерируется по переданной последовательности.
+	for _, word := range ms {
+		// Метка, что слово присутствует в мапе (исключая ситуацию, где повторные элементы не добавляются).
+		flag := false
+
+		// Итерируется по мапе.
+		for k, v := range anagrams {
+			// Является ли анаграмы слово из последовательности с ключом из мапы.
+			if IsAnagrams(word, k) {
+				// Нужна, чтобы исключить повторяющихся элементов.
+				if CanAppend(word, v) {
+					anagrams[k] = append(v, word)
+				}
+
+				// Элемент находится в мапе.
+				flag = true
+				break
+			}
+		}
+
+		// Если не находится, то добавляем новое множество.
+		if !flag {
+			anagrams[word] = append(anagrams[word], word)
+		}
+	}
+
+	// Проходит по мапе и удаляет единичные множества.
+	for k, v := range anagrams {
+		if len(v) <= 1 {
+			delete(anagrams, k)
+		}
+	}
+
+	return anagrams
+}
+
+func IsAnagrams(strOne, strTwo string) bool {
+	// Проверка на совместимость по количеству байтов.
+	if len(strOne) != len(strTwo) {
+		return false
+	}
+
+	for _, char := range strOne {
+		// Если количество вхождений подстроки в строке различна, то это не анаграммы.
+		if strings.Count(strOne, string(char)) != strings.Count(strTwo, string(char)) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Нужна, чтобы исключить добавление одинаковых элементов в последовательности.
+func CanAppend(str string, set []string) bool {
+	// Конвертация в слайс рун.
+	runeFormat := []rune(str)
+
+	// Флаг, который решает: добавлять или нет.
+	var flag bool
+
+	// Итерирование по последовательности.
+	for _, word := range set {
+		flag = false
+
+		// Идет проверка каждого символа.
+		for i, char := range []rune(word) {
+			if runeFormat[i] != char {
+				// Если есть различия, то всё нормально и слова не одинаковые.
+				flag = true
+			}
+		}
+
+		// Если слова одинаковые, то дальше нет смысла проверять последовательность.
+		if !flag {
+			break
+		}
+	}
+
+	return flag
 }
