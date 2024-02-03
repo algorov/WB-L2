@@ -16,7 +16,7 @@ import (
 Поддержать флаги:
 -A - "after" печатать +N строк после совпадения [+]
 -B - "before" печатать +N строк до совпадения [+]
--C - "context" (A+B) печатать ±N строк вокруг совпадения
+-C - "context" (A+B) печатать ±N строк вокруг совпадения [+]
 -c - "count" (количество строк) [+]
 -i - "ignore-case" (игнорировать регистр) [+]
 -v - "invert" (вместо совпадения, исключать) [+]
@@ -30,7 +30,10 @@ func main() {
 	var a, b, context int
 	var c, i, v, f, n bool
 
-	substring := "пустын"
+	var (
+		input     string
+		substring string
+	)
 
 	flag.IntVar(&a, "A", 0, "Печатать +N строк после совпадения")
 	flag.IntVar(&b, "B", 0, "Печатать -N строк до совпадения")
@@ -44,7 +47,13 @@ func main() {
 
 	flag.Parse()
 
-	data, err := readFile("input.txt")
+	input = flag.Arg(0)
+	substring = flag.Arg(1)
+	if input == "" || substring == "" {
+		panic("Не введён имя файла или не указана сама подстрока")
+	}
+
+	data, err := readFile(input)
 	if err != nil {
 		panic(err)
 	}
@@ -129,7 +138,7 @@ func main() {
 	case context > 0:
 		a, b = context, context
 		printBefore(result[0], b, data)
-		printAfter(result[0], a, data)
+		printAfter(result[0]+1, a, data)
 	// Обработка флага A.
 	case a > 0:
 		printAfter(result[0], a, data)
