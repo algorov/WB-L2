@@ -1,5 +1,10 @@
 package main
 
+import (
+	"flag"
+	"fmt"
+)
+
 /*
 === Утилита cut ===
 
@@ -14,5 +19,20 @@ package main
 */
 
 func main() {
+	// Объявляет переменные для парсинга флагов.
+	var (
+		f int
+		d string
+		s bool
+	)
 
+	// Определение того, что парсить.
+	flag.IntVar(&f, "f", 0, "Выбрать поля (колонки)")
+	flag.StringVar(&d, "d", "", "Использовать другой разделитель")
+	flag.BoolVar(&s, "s", false, "Только строки с разделителем")
+
+	// Парсит.
+	flag.Parse()
+
+	fmt.Println(f, d, s)
 }
