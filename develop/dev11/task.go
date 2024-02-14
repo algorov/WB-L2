@@ -1,5 +1,10 @@
 package main
 
+import (
+	"log"
+	"net/http"
+)
+
 /*
 === HTTP server ===
 
@@ -22,6 +27,48 @@ package main
 	4. Код должен проходить проверки go vet и golint.
 */
 
-func main() {
+// Обрабатывает запрос на создание события.
+func createEventHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("CreateEventHandler")
+}
 
+// Обрабатывает запрос на обновление события.
+func updateEventHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("UpdateEventHandler")
+}
+
+// Обрабатывает запрос на удаление события.
+func deleteEventHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("DeleteEventHandler")
+}
+
+// Обрабатывает запрос на получение событий за на этот день.
+func eventsForDayHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("events_for_day")
+}
+
+// Обрабатывает запрос на получение событий за на эту неделю.
+func eventsForWeekHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("events_for_week")
+}
+
+// Обрабатывает запрос на получение событий за на этот месяц.
+func eventsForMonthHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("events_for_month")
+}
+
+func main() {
+	// Подключает обработчики.
+	http.HandleFunc("/create_event", createEventHandler)
+	http.HandleFunc("/update_event", updateEventHandler)
+	http.HandleFunc("/delete_event", deleteEventHandler)
+	http.HandleFunc("/events_for_day", eventsForDayHandler)
+	http.HandleFunc("/events_for_week", eventsForWeekHandler)
+	http.HandleFunc("/events_for_month", eventsForMonthHandler)
+
+	// Запускает сервер.
+	log.Println("Starting server on :8080...")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatal("Server error:", err)
+	}
 }
