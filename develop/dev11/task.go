@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -37,21 +38,24 @@ var calendar *storage.Storage
 
 // Обрабатывает запрос на создание события.
 func createEventHandler(w http.ResponseWriter, r *http.Request) {
+	// Если запрос не POST.
 	if r.Method != http.MethodPost {
 		return
 	}
 
 	evt, err := decodeParams(r)
 	if err != nil {
-		fmt.Println(err)
+		errorResponse(w, err.Error(), http.StatusBadRequest)
+		log.Println(err)
+
 		return
 	}
 
 	if validateEvent(evt) {
-		fmt.Println("Хорошо")
 		calendar.AddEvent(evt)
+		resultResponse(w, "Event was created!", calendar.Storage, 200)
 	} else {
-		fmt.Println("Bad")
+		errorResponse(w, "Невалидные данные", http.StatusBadRequest)
 	}
 
 	log.Println("CreateEventHandler")
@@ -59,31 +63,102 @@ func createEventHandler(w http.ResponseWriter, r *http.Request) {
 
 // Обрабатывает запрос на обновление события.
 func updateEventHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.FormValue("user_id")
-	description := r.FormValue("description")
+	// Если запрос не POST.
+	if r.Method != http.MethodPost {
+		return
+	}
 
-	log.Println("UpdateEventHandler", userID, description)
+	userID, err := strconv.Atoi(r.FormValue("event_id"))
+	if err != nil {
+		errorResponse(w, "Некорректное значение", http.StatusBadRequest)
+	}
+
+	description := r.FormValue("content")
+
+	if calendar.UpdateEvent(userID, description) {
+		resultResponse(w, "Event was updated!", calendar.Storage, 200)
+	} else {
+		errorResponse(w, "Такого события нет!", http.StatusBadRequest)
+	}
+
+	log.Println("UpdateEventHandler")
 }
 
 // Обрабатывает запрос на удаление события.
 func deleteEventHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.FormValue("user_id")
+	// Если запрос не POST.
+	if r.Method != http.MethodPost {
+		return
+	}
 
-	log.Println("DeleteEventHandler", userID)
+	userID, err := strconv.Atoi(r.FormValue("user_id"))
+	if err != nil {
+		errorResponse(w, "Некорректное значение", http.StatusBadRequest)
+	}
+
+	if calendar.DeleteEvent(userID) {
+		resultResponse(w, "Event was deleted!", calendar.Storage, 200)
+	} else {
+		errorResponse(w, "Такого события нет!", http.StatusBadRequest)
+	}
 }
 
 // Обрабатывает запрос на получение событий за на этот день.
 func eventsForDayHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		return
+	}
+
+	date, err := time.Parse("2006-01-02", r.URL.Query().Get("date"))
+	if err != nil {
+		errorResponse(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Получает результат.
+	result := calendar.ByDay(date)
+	resultResponse(w, "good!", result, http.StatusOK)
+
 	log.Println("events_for_day")
 }
 
 // Обрабатывает запрос на получение событий за на эту неделю.
 func eventsForWeekHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		return
+	}
+
+	date, err := time.Parse("2006-01-02", r.URL.Query().Get("date"))
+	if err != nil {
+		errorResponse(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Получает результат.
+	result := calendar.ByWeek(date)
+	resultResponse(w, "good!", result, http.StatusOK)
+
 	log.Println("events_for_week")
 }
 
 // Обрабатывает запрос на получение событий за на этот месяц.
 func eventsForMonthHandler(w http.ResponseWriter, r *http.Request) {
+	// Если это не GET-request.
+	if r.Method != http.MethodGet {
+		return
+	}
+
+	// Парсит дату.
+	date, err := time.Parse("2006-01-02", r.URL.Query().Get("date"))
+	if err != nil {
+		errorResponse(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Получает результат.
+	result := calendar.ByMonth(date)
+	resultResponse(w, "good!", result, http.StatusOK)
+
 	log.Println("events_for_month")
 }
 
@@ -119,6 +194,44 @@ func validateEvent(evnt event.Event) bool {
 	return evnt.ID > 0
 }
 
+// Отправляет результат-ошибку в ответ на запрос.
+func errorResponse(w http.ResponseWriter, errDesc string, status int) {
+	errorResponse := struct {
+		Error string `json:"error"`
+	}{Error: errDesc}
+
+	// Сериализация.
+	responseJSON, err := json.Marshal(errorResponse)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// HTTP-response.
+	w.WriteHeader(status)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(responseJSON)
+}
+
+// Отправляет результат-успез в ответ на запрос.
+func resultResponse(w http.ResponseWriter, result string, events []event.Event, status int) {
+	resultResponse := struct {
+		Result string        `json:"result"`
+		Events []event.Event `json:"events"`
+	}{Result: result, Events: events}
+
+	// Сериализация.
+	responseJSON, err := json.Marshal(resultResponse)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(status)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(responseJSON)
+}
+
 func main() {
 	// Подключает обработчики.
 	// POST
@@ -131,6 +244,7 @@ func main() {
 	http.HandleFunc("/events_for_week", eventsForWeekHandler)
 	http.HandleFunc("/events_for_month", eventsForMonthHandler)
 
+	// Создает календарь, где будут храниться события (логично).
 	calendar = storage.New()
 
 	// Запускает сервер.
