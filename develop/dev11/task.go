@@ -1,8 +1,14 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"log"
+	"main/internal/event"
+	"main/internal/storage"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 /*
@@ -27,19 +33,43 @@ import (
 	4. Код должен проходить проверки go vet и golint.
 */
 
+var calendar *storage.Storage
+
 // Обрабатывает запрос на создание события.
 func createEventHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		return
+	}
+
+	evt, err := decodeParams(r)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if validateEvent(evt) {
+		fmt.Println("Хорошо")
+		calendar.AddEvent(evt)
+	} else {
+		fmt.Println("Bad")
+	}
+
 	log.Println("CreateEventHandler")
 }
 
 // Обрабатывает запрос на обновление события.
 func updateEventHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("UpdateEventHandler")
+	userID := r.FormValue("user_id")
+	description := r.FormValue("description")
+
+	log.Println("UpdateEventHandler", userID, description)
 }
 
 // Обрабатывает запрос на удаление события.
 func deleteEventHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("DeleteEventHandler")
+	userID := r.FormValue("user_id")
+
+	log.Println("DeleteEventHandler", userID)
 }
 
 // Обрабатывает запрос на получение событий за на этот день.
@@ -57,14 +87,51 @@ func eventsForMonthHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("events_for_month")
 }
 
+// Собирает в структуру полученные из POST-request параметры.
+func decodeParams(r *http.Request) (event.Event, error) {
+	// Парсит и форматирует под нужный тип.
+	eventID, errID := strconv.Atoi(r.FormValue("event_id"))
+	if errID != nil {
+		return event.Event{}, errors.New(fmt.Sprintf("Неправильный у тебя формат, дружок: %s", errID))
+	}
+
+	// Парсит и форматирует под нужный тип.
+	date, errDate := time.Parse("2006-01-02", r.FormValue("date"))
+	if errDate != nil {
+		return event.Event{}, errors.New(fmt.Sprintf("Неправильный у тебя формат, дружок: %s", errDate))
+	}
+
+	// Парсит и проверяет на непустоту.
+	content := r.FormValue("content")
+	if content == "" {
+		return event.Event{}, errors.New("Неправильный у тебя формат, дружок: no content!")
+	}
+
+	return event.Event{
+		ID:      eventID,
+		Date:    date,
+		Content: content,
+	}, nil
+}
+
+// Валидация события.
+func validateEvent(evnt event.Event) bool {
+	return evnt.ID > 0
+}
+
 func main() {
 	// Подключает обработчики.
+	// POST
 	http.HandleFunc("/create_event", createEventHandler)
 	http.HandleFunc("/update_event", updateEventHandler)
 	http.HandleFunc("/delete_event", deleteEventHandler)
+
+	// GET
 	http.HandleFunc("/events_for_day", eventsForDayHandler)
 	http.HandleFunc("/events_for_week", eventsForWeekHandler)
 	http.HandleFunc("/events_for_month", eventsForMonthHandler)
+
+	calendar = storage.New()
 
 	// Запускает сервер.
 	log.Println("Starting server on :8080...")

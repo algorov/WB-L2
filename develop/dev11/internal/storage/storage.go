@@ -2,40 +2,33 @@ package storage
 
 import (
 	"log"
+	"main/internal/event"
 	"sync"
-	"time"
 )
-
-// Event представляет событие в календаре.
-type Event struct {
-	ID          int       `json:"id"`
-	Date        time.Time `json:"date"`
-	Description string    `json:"description"`
-}
 
 // Storage представляет хранилище для Event.
 type Storage struct {
-	storage []Event
+	storage []event.Event
 	mx      *sync.Mutex
 }
 
 // New создает календарь.
 func New() *Storage {
 	return &Storage{
-		storage: make([]Event, 0, 10),
+		storage: make([]event.Event, 0, 10),
 		mx:      &sync.Mutex{},
 	}
 }
 
 // AddEvent добавляет событие в календарь.
-func (s *Storage) AddEvent(event Event) {
+func (s *Storage) AddEvent(event event.Event) {
 	s.mx.Lock()
 	s.storage = append(s.storage, event)
 	s.mx.Unlock()
 }
 
 // DeleteEvent удаляет событие из календаря. Если событие присутствует в календаре, то возвращается true, иначе false.
-func (s *Storage) DeleteEvent(event Event) bool {
+func (s *Storage) DeleteEvent(event event.Event) bool {
 	isDeleted := false
 
 	s.mx.Lock()
@@ -54,7 +47,7 @@ func (s *Storage) DeleteEvent(event Event) bool {
 }
 
 // UpdateEvent ...
-func (s *Storage) UpdateEvent(event Event) {
+func (s *Storage) UpdateEvent(event event.Event) {
 	log.Println("UpdateEvent")
 }
 
